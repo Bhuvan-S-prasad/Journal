@@ -10,6 +10,7 @@ import {
 } from '@clerk/nextjs'
 import "./globals.css";
 import Sidebar from "@/components/shared/Sidebar";
+import Bottombar from "@/components/shared/Bottombar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,10 +40,11 @@ export default function RootLayout({
         >
           <main className="flex flex-row">
             <Sidebar />
-            <div className="flex-1 bg-primary-foreground">
+            <div className="flex-1 bg-background">
               {children}
             </div>
           </main>
+          <Bottombar />
         </body>
       </html>
     </ClerkProvider>

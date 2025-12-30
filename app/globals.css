@@ -54,6 +54,7 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
   --sidebar-select-text: rgb(46, 243, 46);
+  --sidebar-background: rgb(249, 245, 241)
 }
 
 .dark {
@@ -143,6 +144,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-select-text: var(--sidebar-select-text);
+  --color-sidebar-background: var(--sidebar-background);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);

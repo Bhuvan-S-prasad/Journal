@@ -10,7 +10,7 @@ function Sidebar() {
 
     const pathname = usePathname()
     return (
-        <div className="sticky left-0 top-0 z-20 flex max-h-screen w-[270px] flex-col justify-between overflow-auto pb-5 pt-5 max-md:hidden">
+        <div className="sticky left-0 top-0 bg-sidebar-background z-20 flex max-h-screen w-[270px] flex-col justify-between overflow-auto pb-5 pt-5 max-md:hidden">
             <h1 className="text-2xl font-bold p-6">Daymark</h1>
             <div className="flex flex-col gap-3 px-6 w-full">
 
@@ -21,7 +21,7 @@ function Sidebar() {
                     return (
                         <div key={link.label}>
                             <Link href={route}
-                                className={`flex gap-4 p-3 rounded-lg hover:bg-chart-5 text-sidebar-accent-foreground ${isActive && 'bg-chart-5'}`}>
+                                className={`flex gap-4 p-3 rounded-lg hover:bg-chart-5 text-sidebar-foreground ${isActive && 'bg-chart-5'}`}>
                                 <span className="w-5 h-5">{link.icon}</span>
                                 <p className="max-xs:hidden">{link.label}</p>
                             </Link >
