@@ -8,7 +8,7 @@ function Bottombar() {
     const pathname = usePathname();
 
     return (
-        <section className="fixed bottom-0 z-10 w-full rounded-t-3xl bg-background/60 backdrop-blur-lg p-4 border-t border-border xs:px-7 md:hidden">
+        <section className="fixed bottom-0 z-10 w-full rounded-t-3xl bg-sidebar-background backdrop-blur-lg p-4 border-t border-border xs:px-7 md:hidden">
             <div className="flex items-center justify-between gap-3 xs:gap-5">
                 {sidebarLinks.map((link) => {
                     const isActive = (pathname.includes(link.route) && link.route.length > 1) || pathname === link.route;

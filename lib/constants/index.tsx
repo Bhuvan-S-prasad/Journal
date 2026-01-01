@@ -13,7 +13,7 @@ export const sidebarLinks = [
     },
     {
         icon: <NotebookPen />,
-        route: "/new-entry",
+        route: "/create-entry",
         label: "New Entry"
     },
     {
