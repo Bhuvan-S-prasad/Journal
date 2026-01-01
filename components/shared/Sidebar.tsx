@@ -10,7 +10,7 @@ function Sidebar() {
 
     const pathname = usePathname()
     return (
-        <div className="sticky left-0 top-0 bg-sidebar-background z-20 flex max-h-screen w-[270px] flex-col justify-between overflow-auto pb-5 pt-5 max-md:hidden">
+        <div className="sticky left-0 top-0 bg-sidebar-background z-20 flex w-[270px] flex-col justify-between overflow-auto pb-5 pt-5 max-md:hidden">
             <h1 className="text-2xl font-bold p-6">Daymark</h1>
             <div className="flex flex-col gap-3 px-6 w-full">
 
