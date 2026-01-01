@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@clerk/nextjs/server";
 import Journal from "../models/Journal.model";
 import { connectToDB } from "../mongoose";
 
@@ -44,6 +45,25 @@ export async function createJournal({
     aiGeneratedCategory,
 }: CreateJournalParams) {
     try {
+        const { userId: authenticatedUserId } = await auth();
+
+        if (!authenticatedUserId || authenticatedUserId !== userId) {
+            throw new Error("Unauthorized");
+        }
+
+        if (!title || typeof title !== "string" || title.trim().length === 0) {
+            throw new Error("Title is required and must be a non-empty string");
+        }
+
+        if (!content || !Array.isArray(content) || content.length === 0) {
+            throw new Error("Content is required and cannot be empty");
+        }
+
+        const validMoods = ["very-sad", "sad", "neutral", "happy", "very-happy"];
+        if (!validMoods.includes(mood)) {
+            throw new Error("Invalid mood provided");
+        }
+
         await connectToDB();
 
         const newJournal = await Journal.create({
