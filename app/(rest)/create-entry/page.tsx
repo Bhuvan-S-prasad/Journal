@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
+import EntryForm from "@/components/form/EntryForm";
 
 function Page() {
     const [timestamp, setTimestamp] = useState<string>('');
@@ -10,22 +11,15 @@ function Page() {
     }, []);
 
     return (
-        <main className="pt-10 h-screen px-10 md:px-15">
-            <div className="flex flex-col items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">Create Entry</h1>
+        <main className="pt-10 min-h-screen px-4 md:px-20 max-w-5xl mx-auto">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-3xl font-bold font-serif text-foreground">Create Entry</h1>
+                    <p className="text-muted-foreground text-sm">{timestamp || "\u00A0"}</p>
+                </div>
 
-                <p className="text-muted-foreground text-sm">{timestamp || "\u00A0"}</p>
-
-                <p>How are you feeling today?</p>
-
-
+                <EntryForm />
             </div>
-            <div className="flex-1">
-
-
-            </div>
-
-
         </main>
     )
 }

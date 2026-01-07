@@ -33,7 +33,7 @@ const JournalSchema = new Schema(
 
         mood: {
             type: String,
-            enum: ["very-sad", "sad", "neutral", "happy", "very-happy"],
+            enum: ["calm", "happy", "grateful", "reflective", "stressed"],
             required: true
         },
 

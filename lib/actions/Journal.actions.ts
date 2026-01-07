@@ -16,7 +16,7 @@ interface CreateJournalParams {
             caption?: string;
         };
     }[];
-    mood: "very-sad" | "sad" | "neutral" | "happy" | "very-happy";
+    mood: "calm" | "happy" | "grateful" | "reflective" | "stressed";
     userId: string;
     aiGeneratedCategory?: string;
 }
@@ -33,7 +33,7 @@ interface UpdateJournalParams {
             caption?: string;
         };
     }[];
-    mood?: "very-sad" | "sad" | "neutral" | "happy" | "very-happy";
+    mood?: "calm" | "happy" | "grateful" | "reflective" | "stressed";
     aiGeneratedCategory?: string;
 }
 
@@ -42,7 +42,7 @@ export async function createJournal({
     content,
     mood,
     userId,
-    aiGeneratedCategory,
+    aiGeneratedCategory
 }: CreateJournalParams) {
     try {
         const { userId: authenticatedUserId } = await auth();
@@ -59,7 +59,7 @@ export async function createJournal({
             throw new Error("Content is required and cannot be empty");
         }
 
-        const validMoods = ["very-sad", "sad", "neutral", "happy", "very-happy"];
+        const validMoods = ["calm", "happy", "grateful", "reflective", "stressed"];
         if (!validMoods.includes(mood)) {
             throw new Error("Invalid mood provided");
         }
@@ -72,6 +72,7 @@ export async function createJournal({
             mood,
             userId,
             aiGeneratedCategory,
+            
         });
 
         revalidatePath("/entries");
