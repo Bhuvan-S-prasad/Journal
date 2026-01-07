@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,6 +22,7 @@ import { createJournal } from "@/lib/actions/Journal.actions";
 import { Loader2, Image as ImageIcon, X, Smile, Frown, Meh, Sparkles, CloudRain } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+
 const MOODS = [
     { value: "calm", label: "Calm", icon: CloudRain, color: "bg-blue-100 text-blue-700" },
     { value: "happy", label: "Happy", icon: Smile, color: "bg-yellow-100 text-yellow-700" },
@@ -33,97 +34,202 @@ const MOODS = [
 const formSchema = z.object({
     title: z.string().min(1, "Title is required"),
     mood: z.enum(["calm", "happy", "grateful", "reflective", "stressed"]),
-    content: z.array(
-        z.object({
-            type: z.enum(["text", "image"]),
-            text: z.string().optional(),
-            image: z.object({
-                url: z.string(),
-                alt: z.string().optional(),
-                caption: z.string().optional(),
-            }).optional(),
-        })
-    ).min(1, "At least one content block is required"),
+    content: z.string().min(1, "Content is required"),
+    image: z.array(z.string()).optional(),
 });
+
+const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, React.ComponentProps<typeof Textarea>>((props, ref) => {
+    const { value, onChange, className, ...rest } = props;
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement);
+
+    const adjustHeight = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+    };
+
+    useEffect(() => {
+        adjustHeight();
+    }, [value]);
+
+    return (
+        <Textarea
+            {...rest}
+            value={value}
+            ref={textareaRef}
+            onChange={(e) => {
+                adjustHeight();
+                onChange?.(e);
+            }}
+            className={cn("overflow-hidden resize-none min-h-[50px]", className)}
+            rows={1}
+        />
+    );
+});
+AutoResizeTextarea.displayName = "AutoResizeTextarea";
 
 function EntryForm() {
     const router = useRouter();
     const { userId } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const [fileUrls, setFileUrls] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { startUpload } = useUploadThing("media", {
+        onUploadProgress: (progress) => {
+            console.log("Upload progress:", progress);
+        },
+        onClientUploadComplete: (res) => {
+            console.log("Client upload complete", res);
+        },
+        onUploadError: (error) => {
+            console.error("Upload error encounterd", error);
+        }
+    });
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             title: "",
             mood: "calm",
-            content: [{ type: "text", text: "" }],
+            content: "",
+            image: [],
         },
     });
-
-    // UploadThing hook
-    const { startUpload, isUploading } = useUploadThing("imageUploader", {
-        onClientUploadComplete: (res) => {
-            console.log("Upload completed", res);
-            if (res && res[0]) {
-                const fileUrl = res[0].url || res[0].ufsUrl; // @ts-ignore
-                if (!fileUrl) {
-                    alert("Upload failed: No URL returned");
-                    return;
-                }
-
-                const currentContent = form.getValues("content");
-                const newBlock = {
-                    type: "image" as const,
-                    image: { url: fileUrl, alt: res[0].name, caption: "" }
-                };
-
-                form.setValue("content", [
-                    newBlock,
-                    ...currentContent,
-                ], { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-
-                alert("Image uploaded!");
-            }
-        },
-        onUploadError: (e) => {
-            console.error("Upload error:", e);
-            alert("Upload failed, please try again.");
-        }
-    });
-
-
 
     const content = form.watch("content");
 
-    async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!userId) return;
+    const handleImage = (e: ChangeEvent<HTMLInputElement>) => {
+        e.preventDefault();
 
+        setIsUploading(true);
+
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+
+            if (files.length + newFiles.length > 4) {
+                alert("You can only upload up to 4 images.");
+                return;
+            }
+
+            setFiles(prev => [...prev, ...newFiles]);
+
+            newFiles.forEach(file => {
+                if (!file.type.includes('image')) return;
+
+                const fileReader = new FileReader();
+                fileReader.onload = (event) => {
+                    const imageDataUrl = event.target?.result?.toString() || '';
+                    setFileUrls(prev => [...prev, imageDataUrl]);
+                }
+                fileReader.readAsDataURL(file);
+            });
+        }
+        setIsUploading(false);
+    }
+
+    const removeImage = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+        setFileUrls(prev => prev.filter((_, i) => i !== index));
+    }
+
+    const triggerFileInput = () => {
+        fileInputRef.current?.click();
+    }
+
+    const onSubmit = async (values: z.infer<typeof formSchema>) => {
+        setIsSubmitting(true);
         try {
-            setIsSubmitting(true);
+            let uploadedImageUrls: string[] = [];
 
-            console.log("Submitting values:", values);
+            if (!userId) {
+                return;
+            }
+
+            if (files.length > 0) {
+                try {
+                    console.log("Starting image upload...");
+                    const uploadPromise = startUpload(files);
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Upload timed out")), 60000)
+                    );
+
+                    const imgRes = await Promise.race([uploadPromise, timeoutPromise]) as any;
+
+                    if (imgRes && imgRes.length > 0) {
+                        uploadedImageUrls = imgRes.map((res: any) => res.ufsUrl);
+
+                        uploadedImageUrls = imgRes.map((res: any) => res.url || res.ufsUrl);
+
+                        console.log("Images uploaded successfully", uploadedImageUrls);
+                    } else {
+                        console.error("Image upload failed or returned no results");
+                        throw new Error("Upload failed (no results)");
+                    }
+                } catch (uploadError) {
+                    console.error("Error uploading images:", uploadError);
+                    alert("Failed to upload images: " + (uploadError instanceof Error ? uploadError.message : "Unknown error"));
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
+
+            // AI Categorization
+            let categoryId = "";
+            try {
+                console.log("Categorizing entry...");
+                const categoryRes = await fetch("/api/categorize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: values.title,
+                        content: values.content,
+                        userId,
+                    }),
+                });
+
+                if (categoryRes.ok) {
+                    const data = await categoryRes.json();
+                    categoryId = data.categoryId;
+                    console.log("Category assigned:", data.categoryTitle);
+                } else {
+                    console.warn("Categorization failed, proceeding without category");
+                }
+            } catch (error) {
+                console.error("Error categorizing entry:", error);
+            }
+
+            console.log("Submitting journal entry with params:", { ...values, imageCount: uploadedImageUrls.length, categoryId });
 
             await createJournal({
-                ...values,
-                userId: userId,
+                title: values.title,
+                mood: values.mood,
+                content: values.content,
+                image: uploadedImageUrls,
+                userId,
+                aiGeneratedCategory: categoryId,
             });
 
-            router.push("/");
-            router.refresh();
+            console.log("Entry created successfully");
+            router.push("/entries");
         } catch (error) {
-            console.error("Failed to create entry:", error);
+            console.error("Error submitting entry:", error);
+            alert("Failed to create journal entry. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
     }
 
-    // Handlers for image upload
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        startUpload([file]);
-        e.target.value = ""; // Reset input
-    };
+
+    if (!userId) {
+        return null;
+    }
 
     return (
         <Form {...form}>
@@ -179,7 +285,7 @@ function EntryForm() {
                                 <Input
                                     {...field}
                                     placeholder="Give your entry a title..."
-                                    className="text-4xl font-serif font-bold border-none shadow-none px-0 py-6 h-auto placeholder:text-muted-foreground/50 focus-visible:ring-0 bg-transparent"
+                                    className="text-4xl font-serif font-bold border-none shadow-none focus-visible:ring-background px-0 py-6 h-auto placeholder:text-muted-foreground/50 bg-transparent"
                                 />
                             </FormControl>
                             <FormMessage />
@@ -191,55 +297,61 @@ function EntryForm() {
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Sparkles className="w-4 h-4" />
-                        <span>Need a prompt?</span>
+                        <span>How was your day?</span>
                     </div>
 
-                    <div className="space-y-4 min-h-[300px]">
-                        {content.map((block, index) => (
-                            <div key={index} className="relative group">
-                                {block.type === "text" && (
-                                    <FormField
-                                        control={form.control}
-                                        name={`content.${index}.text`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl>
-                                                    <Textarea
-                                                        {...field}
-                                                        placeholder={index === 0 ? "Start writing your thoughts..." : "Continue writing..."}
-                                                        className="border-none resize-none shadow-none focus-visible:ring-0 px-0 min-h-[100px] text-lg leading-relaxed bg-transparent"
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
+                    <div className="space-y-4 min-h-[225px]">
+                        <FormField
+                            control={form.control}
+                            name="content"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <AutoResizeTextarea
+                                            {...field}
+                                            placeholder="Start writing your thoughts..."
+                                            className="border-none shadow-none focus-visible:ring-background px-0 min-h-[100px] text-lg leading-relaxed bg-transparent placeholder:text-muted-foreground/50"
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                                {block.type === "image" && block.image && (
-                                    <div className="relative rounded-lg overflow-hidden border bg-muted">
+                        {fileUrls.length > 0 && (
+                            <div className={`mt-4 ${fileUrls.length > 1
+                                ? "flex gap-3 overflow-x-auto pb-2 h-64"
+                                : ""
+                                }`}>
+                                {fileUrls.map((url, index) => (
+                                    <div
+                                        key={index}
+                                        className={`relative rounded-xl overflow-hidden border bg-muted group ${fileUrls.length === 1
+                                            ? "w-full max-h-[500px]"
+                                            : "h-full shrink-0 aspect-3/4"
+                                            }`}
+                                    >
                                         <img
-                                            src={block.image.url}
-                                            alt={block.image.alt || "Entry image"}
-                                            className="w-full h-auto max-h-[500px] object-contain"
+                                            src={url}
+                                            alt={`Entry image ${index + 1}`}
+                                            className={`${fileUrls.length === 1
+                                                ? "w-full h-auto object-cover"
+                                                : "w-full h-full object-cover"
+                                                }`}
                                         />
                                         <Button
                                             type="button"
                                             variant="secondary"
                                             size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white"
-                                            onClick={() => {
-                                                const newContent = [...content];
-                                                newContent.splice(index, 1);
-                                                form.setValue("content", newContent);
-                                            }}
+                                            className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => removeImage(index)}
                                         >
                                             <X className="w-4 h-4" />
                                         </Button>
                                     </div>
-                                )}
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
 
                     {/* Toolbar / Actions */}
@@ -250,7 +362,8 @@ function EntryForm() {
                                 id="image-upload"
                                 className="hidden"
                                 accept="image/*"
-                                onChange={handleImageUpload}
+                                multiple
+                                onChange={handleImage}
                                 disabled={isUploading}
                             />
                             <Button
@@ -272,13 +385,16 @@ function EntryForm() {
                 </div>
 
                 <div className="flex justify-end">
-                    <Button type="submit" disabled={isSubmitting} size="lg">
+                    <Button type="submit"
+                        className="bg-primary text-white hover:bg-chart-5 hover:text-primary"
+                        disabled={isSubmitting || isUploading}
+                        size="lg">
                         {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                         Save Entry
                     </Button>
                 </div>
             </form>
-        </Form>
+        </Form >
     );
 }
 

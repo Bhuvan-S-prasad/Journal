@@ -2,15 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
 } from '@clerk/nextjs'
-import "./globals.css";
 import Sidebar from "@/components/shared/Sidebar";
 import Bottombar from "@/components/shared/Bottombar";
+import "@/app/globals.css"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,9 +33,9 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <main className="flex flex-row">
+          <main className="flex flex-row h-screen overflow-hidden">
             <Sidebar />
-            <div className="flex-1 bg-background">
+            <div className="flex-1 bg-background overflow-y-auto pb-24 md:pb-0">
               {children}
             </div>
           </main>

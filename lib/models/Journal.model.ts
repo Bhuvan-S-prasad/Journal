@@ -1,24 +1,5 @@
 import mongoose, { Schema, Types } from "mongoose";
 
-const ContentBlockSchema = new Schema(
-    {
-        type: {
-            type: String,
-            enum: ["text", "image"],
-            required: true
-        },
-
-        text: String,
-
-        image: {
-            url: String,
-            alt: String,
-            caption: String
-        }
-    },
-    { _id: false }
-);
-
 const JournalSchema = new Schema(
     {
         title: {
@@ -27,7 +8,7 @@ const JournalSchema = new Schema(
         },
 
         content: {
-            type: [ContentBlockSchema],
+            type: String,
             required: true
         },
 
@@ -44,17 +25,24 @@ const JournalSchema = new Schema(
         },
 
         aiGeneratedCategory: {
-            type: Types.ObjectId,
+            type: Schema.Types.ObjectId,
             ref: "Category",
-            immutable: true
+            required: false
         },
+
+        image: [String],
 
         createdAt: {
             type: Date,
             default: Date.now
         }
+
     },
     { timestamps: false }
 );
 
-export default mongoose.models.Journal || mongoose.model("Journal", JournalSchema);
+if (mongoose.models.Journal) {
+    delete mongoose.models.Journal;
+}
+
+export default mongoose.model("Journal", JournalSchema);

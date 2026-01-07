@@ -7,15 +7,8 @@ import { connectToDB } from "../mongoose";
 
 interface CreateJournalParams {
     title?: string;
-    content: {
-        type: "text" | "image";
-        text?: string;
-        image?: {
-            url: string;
-            alt?: string;
-            caption?: string;
-        };
-    }[];
+    content: string;
+    image?: string[];
     mood: "calm" | "happy" | "grateful" | "reflective" | "stressed";
     userId: string;
     aiGeneratedCategory?: string;
@@ -24,15 +17,8 @@ interface CreateJournalParams {
 interface UpdateJournalParams {
     journalId: string;
     title?: string;
-    content?: {
-        type: "text" | "image";
-        text?: string;
-        image?: {
-            url: string;
-            alt?: string;
-            caption?: string;
-        };
-    }[];
+    content?: string;
+    image?: string[];
     mood?: "calm" | "happy" | "grateful" | "reflective" | "stressed";
     aiGeneratedCategory?: string;
 }
@@ -42,7 +28,9 @@ export async function createJournal({
     content,
     mood,
     userId,
+    image,
     aiGeneratedCategory
+
 }: CreateJournalParams) {
     try {
         const { userId: authenticatedUserId } = await auth();
@@ -55,7 +43,7 @@ export async function createJournal({
             throw new Error("Title is required and must be a non-empty string");
         }
 
-        if (!content || !Array.isArray(content) || content.length === 0) {
+        if (!content || typeof content !== "string" || content.trim().length === 0) {
             throw new Error("Content is required and cannot be empty");
         }
 
@@ -66,14 +54,22 @@ export async function createJournal({
 
         await connectToDB();
 
-        const newJournal = await Journal.create({
+        console.log("connecting to db and creating")
+
+        const journalData = {
             title,
             content,
             mood,
             userId,
-            aiGeneratedCategory,
-            
-        });
+            image,
+            aiGeneratedCategory: aiGeneratedCategory && aiGeneratedCategory !== "" ? aiGeneratedCategory : null,
+        };
+
+        console.log("Creating journal with data:", JSON.stringify(journalData, null, 2));
+
+        const newJournal = await Journal.create(journalData);
+
+        console.log("created journal")
 
         revalidatePath("/entries");
         revalidatePath("/profile");
