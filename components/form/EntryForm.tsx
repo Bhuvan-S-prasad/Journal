@@ -162,7 +162,6 @@ function EntryForm() {
                     const imgRes = await Promise.race([uploadPromise, timeoutPromise]) as any;
 
                     if (imgRes && imgRes.length > 0) {
-                        uploadedImageUrls = imgRes.map((res: any) => res.ufsUrl);
 
                         uploadedImageUrls = imgRes.map((res: any) => res.url || res.ufsUrl);
 

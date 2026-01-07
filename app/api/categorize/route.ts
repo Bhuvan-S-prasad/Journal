@@ -1,10 +1,11 @@
 import { OpenRouter } from '@openrouter/sdk';
 import { z } from "zod";
 import { getAllCategories, createCategory } from "@/lib/actions/Category.actions";
+import { auth } from "@clerk/nextjs/server"
 
 
 const openRouter = new OpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY!,
+    apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 const CategoryResponseSchema = z.object({
@@ -17,7 +18,8 @@ const CategoryResponseSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const { title, content, userId } = await req.json();
+        const { title, content } = await req.json();
+        const { userId } = await auth();
 
         if (!userId) {
             return new Response("Unauthorized", { status: 401 });
@@ -142,7 +144,7 @@ RESPOND ONLY WITH THE JSON OBJECT.`;
                 if (!existingCategory) {
                     console.warn(`AI selected non-existent category ID: ${result.categoryId}. Falling back to creating new.`);
 
-                    const newTitle = result.categoryId || "General";
+                    const newTitle = result.newCategoryTitle || "General";
                     const newColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 80%)`;
 
                     const newCategory = await createCategory({
